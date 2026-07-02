@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!DOCT<!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
@@ -524,4 +524,371 @@
             document.getElementById('kpiTotalStaff').innerText = employees.length;
             
             toggleNamesPanel();
-            generateStr
+            generateStructure();
+            showSaveIndicator();
+        }
+
+        const monthSelect = document.getElementById('monthSelect');
+        months.forEach((m, i) => {
+            let opt = document.createElement('option');
+            opt.value = i;
+            opt.innerText = m;
+            if(i === new Date().getMonth()) opt.selected = true;
+            monthSelect.appendChild(opt);
+        });
+
+        function generateStructure() {
+            const topHeader = document.getElementById('topHeader');
+            const subHeader = document.getElementById('subHeader');
+            const container = document.getElementById('tableContainer');
+            
+            topHeader.innerHTML = '';
+            subHeader.innerHTML = '';
+            container.innerHTML = '';
+
+            const activeMonth = parseInt(monthSelect.value);
+            const totalDays = new Date(year, activeMonth + 1, 0).getDate();
+
+            let thDay = document.createElement('th');
+            thDay.className = 'day-cell';
+            thDay.setAttribute('rowspan', '2');
+            thDay.innerText = 'التاريخ / اليوم';
+            topHeader.appendChild(thDay);
+
+            employees.forEach((emp, index) => {
+                let th = document.createElement('th');
+                th.setAttribute('colspan', '2');
+                th.innerText = emp.name;
+                th.setAttribute('data-emp-idx', index);
+                topHeader.appendChild(th);
+
+                let thIn = document.createElement('th'); thIn.innerText = 'حضور'; thIn.setAttribute('data-emp-idx', index);
+                let thOut = document.createElement('th'); thOut.innerText = 'انصراف'; thOut.setAttribute('data-emp-idx', index);
+                subHeader.appendChild(thIn);
+                subHeader.appendChild(thOut);
+            });
+
+            const dayNames = ["الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
+            for(let d = 1; d <= totalDays; d++) {
+                let tr = document.createElement('tr');
+                let exactDate = new Date(year, activeMonth, d);
+                let dayIdx = exactDate.getDay();
+                
+                if(dayIdx === 5 || dayIdx === 6) tr.className = 'weekend';
+
+                let tdDay = document.createElement('td');
+                tdDay.className = 'day-cell';
+                tdDay.innerHTML = `${d} <small style="display:block;color:#64748b">${dayNames[dayIdx]}</small>`;
+                tr.appendChild(tdDay);
+
+                employees.forEach((emp, index) => {
+                    let tdIn = document.createElement('td');
+                    tdIn.setAttribute('data-emp-idx', index);
+                    let inInput = document.createElement('input');
+                    inInput.type = 'time';
+                    inInput.className = 'time-field';
+                    inInput.id = `raw_${activeMonth}_${d}_${emp.id}_in`;
+                    inInput.addEventListener('change', () => { autoSaveRow(); processCalculations(); });
+                    tdIn.appendChild(inInput);
+                    tr.appendChild(tdIn);
+
+                    let tdOut = document.createElement('td');
+                    tdOut.setAttribute('data-emp-idx', index);
+                    let outInput = document.createElement('input');
+                    outInput.type = 'time';
+                    outInput.className = 'time-field';
+                    outInput.id = `raw_${activeMonth}_${d}_${emp.id}_out`;
+                    outInput.addEventListener('change', () => { autoSaveRow(); processCalculations(); });
+                    tdOut.appendChild(outInput);
+                    tr.appendChild(tdOut);
+                });
+                container.appendChild(tr);
+            }
+            
+            buildFooter();
+            loadMonthData();
+            document.getElementById('employeeSearch').value = ''; 
+        }
+
+        function buildFooter() {
+            const foot = document.getElementById('tableSummary');
+            foot.innerHTML = '';
+            let tr = document.createElement('tr');
+            
+            let tdMain = document.createElement('td');
+            tdMain.className = 'day-cell';
+            tdMain.innerText = 'الملخص الختامي لشهر ' + months[monthSelect.value];
+            tr.appendChild(tdMain);
+
+            employees.forEach((emp, index) => {
+                let td = document.createElement('td');
+                td.setAttribute('colspan', '2');
+                td.setAttribute('data-emp-idx', index);
+                td.id = `summary_cell_${emp.id}`;
+                td.innerHTML = `
+                    <span class="stat-badge stat-p">حضور: 0 أيام</span>
+                    <span class="stat-badge stat-h">ساعات العمل: 0س</span>
+                    <span class="stat-badge stat-l">تأخير: 0 مرة</span>
+                `;
+                tr.appendChild(td);
+            });
+            foot.appendChild(tr);
+        }
+
+        function processCalculations() {
+            const activeMonth = parseInt(monthSelect.value);
+            const totalDays = new Date(year, activeMonth + 1, 0).getDate();
+            const officialIn = document.getElementById('officialCheckIn').value;
+
+            let globalDaysCount = 0;
+            let globalTotalMinutes = 0;
+
+            employees.forEach((emp) => {
+                let daysCount = 0;
+                let totalMinutes = 0;
+                let lateCount = 0;
+
+                for(let d = 1; d <= totalDays; d++) {
+                    let inEl = document.getElementById(`raw_${activeMonth}_${d}_${emp.id}_in`);
+                    let outEl = document.getElementById(`raw_${activeMonth}_${d}_${emp.id}_out`);
+
+                    if(inEl && inEl.value) {
+                        daysCount++;
+                        globalDaysCount++;
+                        
+                        if(officialIn && inEl.value > officialIn) {
+                            inEl.classList.add('late-flag');
+                            lateCount++;
+                        } else {
+                            inEl.classList.remove('late-flag');
+                        }
+
+                        if(outEl && outEl.value) {
+                            let [hIn, mIn] = inEl.value.split(':').map(Number);
+                            let [hOut, mOut] = outEl.value.split(':').map(Number);
+                            
+                            let diffInMinutes = (hOut * 60 + mOut) - (hIn * 60 + mIn);
+                            if(diffInMinutes > 0) {
+                                totalMinutes += diffInMinutes;
+                                globalTotalMinutes += diffInMinutes;
+                            }
+                        }
+                    } else {
+                        if(inEl) inEl.classList.remove('late-flag');
+                    }
+                }
+
+                let finalHours = Math.floor(totalMinutes / 60);
+                let finalMins = totalMinutes % 60;
+
+                let summaryCell = document.getElementById(`summary_cell_${emp.id}`);
+                if(summaryCell) {
+                    summaryCell.innerHTML = `
+                        <span class="stat-badge stat-p">🟢 حضور: ${daysCount} يوم</span>
+                        <span class="stat-badge stat-h">🔵 عمل: ${finalHours}س و ${finalMins}د</span>
+                        <span class="stat-badge stat-l">🔴 تأخير: ${lateCount} مرة</span>
+                    `;
+                }
+            });
+
+            // تحديث بطاقات الـ KPI العلوية بالداتا الكلية لشهر الحالي
+            document.getElementById('kpiTotalAttendance').innerText = `${globalDaysCount} يوم`;
+            document.getElementById('kpiTotalHours').innerText = `${Math.floor(globalTotalMinutes / 60)}س`;
+        }
+
+        // خاصية الفلترة الذكية المحدثة لأعمدة الجدول بناءً على البحث
+        function filterEmployeeColumns() {
+            const query = document.getElementById('employeeSearch').value.trim().toLowerCase();
+            
+            employees.forEach((emp, index) => {
+                const match = emp.name.toLowerCase().includes(query);
+                const cells = document.querySelectorAll(`[data-emp-idx="${index}"]`);
+                
+                cells.forEach(cell => {
+                    if (match || query === '') {
+                        cell.classList.remove('hide-column');
+                    } else {
+                        cell.classList.add('hide-column');
+                    }
+                });
+            });
+        }
+
+        function autoSaveRow() {
+            const activeMonth = monthSelect.value;
+            const totalDays = new Date(year, parseInt(activeMonth) + 1, 0).getDate();
+            let database = JSON.parse(localStorage.getItem('ultimate_attendance_db')) || {};
+
+            for(let d = 1; d <= totalDays; d++) {
+                employees.forEach((emp) => {
+                    let inId = `raw_${activeMonth}_${d}_${emp.id}_in`;
+                    let outId = `raw_${activeMonth}_${d}_${emp.id}_out`;
+
+                    let inInput = document.getElementById(inId);
+                    let outInput = document.getElementById(outId);
+
+                    if (inInput) {
+                        if(inInput.value) database[inId] = inInput.value; else delete database[inId];
+                    }
+                    if (outInput) {
+                        if(outInput.value) database[outId] = outInput.value; else delete database[outId];
+                    }
+                });
+            }
+            localStorage.setItem('ultimate_attendance_db', JSON.stringify(database));
+            showSaveIndicator();
+        }
+
+        function showSaveIndicator() {
+            let indicator = document.getElementById('saveIndicator');
+            indicator.classList.add('active');
+            setTimeout(() => indicator.classList.remove('active'), 1500);
+        }
+
+        function loadMonthData() {
+            const activeMonth = monthSelect.value;
+            const totalDays = new Date(year, parseInt(activeMonth) + 1, 0).getDate();
+            let database = JSON.parse(localStorage.getItem('ultimate_attendance_db')) || {};
+
+            for(let d = 1; d <= totalDays; d++) {
+                employees.forEach((emp) => {
+                    let inId = `raw_${activeMonth}_${d}_${emp.id}_in`;
+                    let outId = `raw_${activeMonth}_${d}_${emp.id}_out`;
+
+                    if(database[inId] && document.getElementById(inId)) document.getElementById(inId).value = database[inId];
+                    if(database[outId] && document.getElementById(outId)) document.getElementById(outId).value = database[outId];
+                });
+            }
+            processCalculations();
+        }
+
+        function quickFillWorkdays() {
+            const activeMonth = parseInt(monthSelect.value);
+            const totalDays = new Date(year, activeMonth + 1, 0).getDate();
+            
+            if(confirm("هل تود ملء خانات الشهر بالكامل بمواعيد افتراضية (09:00 ص - 05:00 م) لجميع الموظفين الموجودين حالياً للأيام العادية فقط؟")) {
+                for(let d = 1; d <= totalDays; d++) {
+                    let dayOfWeek = new Date(year, activeMonth, d).getDay();
+                    if(dayOfWeek === 5 || dayOfWeek === 6) continue;
+
+                    employees.forEach((emp) => {
+                        let inInput = document.getElementById(`raw_${activeMonth}_${d}_${emp.id}_in`);
+                        let outInput = document.getElementById(`raw_${activeMonth}_${d}_${emp.id}_out`);
+                        
+                        if(inInput && !inInput.value) inInput.value = "09:00";
+                        if(outInput && !outInput.value) outInput.value = "17:00";
+                    });
+                }
+                autoSaveRow();
+                processCalculations();
+            }
+        }
+
+        function exportExcel() {
+            const activeMonth = monthSelect.value;
+            const totalDays = new Date(year, parseInt(activeMonth) + 1, 0).getDate();
+            let csv = "\uFEFF"; 
+            
+            csv += "يوم / تاريخ,";
+            employees.forEach(e => csv += `${e.name},,`);
+            csv += "\n,";
+            employees.forEach(() => csv += "حضور,انصراف,");
+            csv += "\n";
+
+            for(let d = 1; d <= totalDays; d++) {
+                csv += `${d},`;
+                employees.forEach((emp) => {
+                    let iv = document.getElementById(`raw_${activeMonth}_${d}_${emp.id}_in`).value || "-";
+                    let ov = document.getElementById(`raw_${activeMonth}_${d}_${emp.id}_out`).value || "-";
+                    csv += `${iv},${ov},`;
+                });
+                csv += "\n";
+            }
+
+            let blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            let link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.setAttribute("download", `تقرير_الحضور_والانصراف_لشهر_${months[activeMonth]}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        function triggerBackup() {
+            let data = localStorage.getItem('ultimate_attendance_db') || "{}";
+            let dynamicNames = localStorage.getItem('attendance_employees_dynamic') || "[]";
+            let fullBackup = { db: JSON.parse(data), names: JSON.parse(dynamicNames) };
+            
+            let blob = new Blob([JSON.stringify(fullBackup)], { type: 'application/json' });
+            let link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.setAttribute("download", `نسخة_احتياطية_شاملة_الموظفين_2026.json`);
+            link.click();
+        }
+
+        function importBackup(event) {
+            let file = event.target.files[0];
+            if (!file) return;
+            let reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    let parsed = JSON.parse(e.target.result);
+                    if(parsed.db && parsed.names) {
+                        localStorage.setItem('ultimate_attendance_db', JSON.stringify(parsed.db));
+                        localStorage.setItem('attendance_employees_dynamic', JSON.stringify(parsed.names));
+                    } else {
+                        localStorage.setItem('ultimate_attendance_db', JSON.stringify(parsed));
+                    }
+                    alert("✅ تم استعادة جميع البيانات وهيكل أسماء الموظفين بنجاح.");
+                    initApp();
+                } catch(err) {
+                    alert("❌ فشل تحميل الملف، تأكد من اختيار ملف نسخة احتياطية صحيح.");
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function initApp() {
+            loadEmployeeNames();
+            generateStructure();
+        }
+
+        initApp();
+    </script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+            
+
+
+        
