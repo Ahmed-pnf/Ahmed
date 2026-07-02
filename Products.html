@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>لوحة إدارة النواقص الذكية - Ultra Edition</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --bg-main: #f8fafc;
+            --bg-card: #ffffff;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --primary: #4f46e5;
+            --primary-light: rgba(79, 70, 229, 0.1);
+            --primary-hover: #4338ca;
+            --success: #10b981;
+            --success-light: rgba(16, 185, 129, 0.1);
+            --danger: #ef4444;
+            --danger-hover: #dc2626;
+            --border: #e2e8f0;
+            --input-bg: #f1f5f9;
+            --shadow-sm: 0 2px 8px rgba(0,0,0,0.04);
+            --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.05), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+
+        [data-theme="dark"] {
+            --bg-main: #0b0f19;
+            --bg-card: #151f32;
+            --text-main: #f1f5f9;
+            --text-muted: #94a3b8;
+            --primary: #6366f1;
+            --primary-light: rgba(99, 102, 241, 0.15);
+            --primary-hover: #4f46e5;
+            --border: #243249;
+            --input-bg: #0b0f19;
+            --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
+        }
+
+        * {
+            box-sizing: border-box;
+            font-family: 'Cairo', sans-serif;
+            margin: 0;
+            padding: 0;
+            transition: background-color 0.3s ease, border-color 0.3s ease, color 0.2s ease;
+        }
+
+        body {
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            padding: 30px 15px;
+            display: flex;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        .dashboard {
+            width: 100%;
+            max-width: 900px;
+            background: var(--bg-card);
+            border-radius: 28px;
+            box-shadow: var(--shadow-lg);
+            overflow: hidden;
+            animation: appLaunch 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        /* هيدر توب كلاس */
+        .dash-header {
+            background: linear-gradient(135deg, #4f46e5, #6366f1);
+            padding: 40px 30px;
+            position: relative;
+            color: white;
+        }
+
+        [data-theme="dark"] .dash-header {
+            background: linear-gradient(135deg, #1e1b4b, #2e2a72);
+        }
+
+        .dash-header h1 { font-size: 28px; font-weight: 900; margin-bottom: 6px; }
+        .dash-header p { font-size: 14px; opacity: 0.8; font-weight: 300; }
+
+        .theme-btn {
+            position: absolute;
+            top: 35px;
+            left: 30px;
+            background: rgba(255,255,255,0.12);
+            border: 1px solid rgba(255,255,255,0.2);
+            backdrop-filter: blur(8px);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 50px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        /* لوحة الإحصائيات الذكية */
+        .stats-bar {
+            display: flex;
+            gap: 15px;
+            padding: 20px 30px;
+            background: rgba(0,0,0,0.02);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .stat-card {
+            flex: 1;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            padding: 12px 20px;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .stat-label { font-size: 13px; color: var(--text-muted); font-weight: 600; }
+        .stat-value { font-size: 20px; font-weight: 800; color: var(--primary); }
+
+        /* التبويبات المودرن */
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid var(--border);
+            background: rgba(0,0,0,0.01);
+        }
+
+        .tab-link {
+            flex: 1;
+            padding: 18px;
+            border: none;
+            background: none;
+            font-size: 16px;
+            font-weight: 800;
+            color: var(--text-muted);
+            cursor: pointer;
+            text-align: center;
+            position: relative;
+        }
+
+        .tab-link.active {
+            color: var(--primary);
+            background: var(--bg-card);
+        }
+
+        .tab-link.active::after {
+            content: '';
+            position: absolute;
+            bottom: -1px;
+            left: 20%;
+            right: 20%;
+            height: 3.5px;
+            background: var(--primary);
+            border-radius: 10px 10px 0 0;
+        }
+
+        .panel { padding: 30px; display: none; }
+        .panel.active { display: block; animation: tabFade 0.4s ease; }
+
+        /* ستايل الفورم الاحترافي */
+        .form-container {
+            background: rgba(0,0,0,0.01);
+            border: 1px solid var(--border);
+            padding: 20px;
+            border-radius: 20px;
+            margin-bottom: 30px;
+        }
+
+        .grid-inputs {
+            display: grid;
+            grid-template-columns: 1.5fr 2fr 1fr auto;
+            gap: 15px;
+            align-items: flex-end;
+        }
+
+        @media (max-width: 700px) {
+            .grid-inputs { grid-template-columns: 1fr; }
+        }
+
+        .field { display: flex; flex-direction: column; gap: 6px; }
+        .field label { font-size: 13px; font-weight: 700; color: var(--text-muted); }
+
+        input, select {
+            padding: 12px 16px;
+            border: 1.5px solid var(--border);
+            border-radius: 12px;
+            background: var(--input-bg);
+            color: var(--text-main);
+            font-size: 15px;
+            outline: none;
+        }
+
+        input:focus, select:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 4px var(--primary-light);
+            background: var(--bg-card);
+        }
+
+        /* شريط البحث */
+        .search-wrapper {
+            margin-bottom: 25px;
+            display: flex;
+            gap: 10px;
+        }
+        .search-wrapper input { width: 100%; font-size: 14px; }
+
+        /* الأزرار الفاخرة */
+        .btn {
+            padding: 12px 24px;
+            border-radius: 12px;
+            border: none;
+            font-weight: 700;
+            font-size: 15px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: all 0.2s ease;
+        }
+
+        .btn:active { transform: scale(0.97); }
+        .btn-main { background: var(--primary); color: white; height: 49px; }
+        .btn-main:hover { background: var(--primary-hover); }
+        
+        .btn-action-del { background: rgba(239, 68, 68, 0.08); color: var(--danger); padding: 6px 12px; font-size: 13px; }
+        .btn-action-del:hover { background: var(--danger); color: white; }
+
+        .btn-share { background: var(--success-light); color: var(--success); padding: 6px 12px; font-size: 13px; }
+        .btn-share:hover { background: var(--success); color: white; }
+
+        /* كروت عرض الموردين والنواقص */
+        .supplier-block {
+            background: var(--bg-card);
+            border: 1.5px solid var(--border);
+            border-radius: 20px;
+            margin-bottom: 25px;
+            overflow: hidden;
+            box-shadow: var(--shadow-sm);
+            animation: cardSlide 0.3s ease-out;
+        }
+
+        .block-header {
+            background: rgba(0,0,0,0.01);
+            padding: 16px 24px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-right: 5px solid var(--primary);
+        }
+
+        .block-title { font-weight: 800; font-size: 16px; display: flex; align-items: center; gap: 8px; }
+        .header-actions { display: flex; gap: 8px; }
+
+        .items-list-table { width: 100%; border-collapse: collapse; }
+        .items-list-table th, .items-list-table td { padding: 16px 24px; text-align: right; border-bottom: 1px solid var(--border); }
+        .items-list-table th { background: rgba(0,0,0,0.005); color: var(--text-muted); font-size: 13px; font-weight: 700; }
+        .items-list-table tr:hover td { background: rgba(79, 70, 229, 0.01); }
+        .items-list-table tr:last-child td { border-bottom: none; }
+
+        /* إدارة الموردين */
+        .sup-manage-item {
+            display: flex;
+            gap: 15px;
+            background: var(--bg-card);
+            padding: 14px 20px;
+            border: 1.5px solid var(--border);
+            border-radius: 16px;
+            margin-bottom: 12px;
+            align-items: center;
+        }
+
+        .sup-manage-item input { flex: 1; background: transparent; border: 1px solid transparent; font-weight: 700; }
+        .sup-manage-item input:focus { border-color: var(--border); background: var(--input-bg); }
+
+        .empty-view { text-align: center; padding: 60px 20px; color: var(--text-muted); font-size: 15px; }
+
+        /* الأنيميشنز */
+        @keyframes appLaunch { from { opacity: 0; transform: scale(0.98); } to { opacity: 1; transform: scale(1); } }
+        @keyframes tabFade { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes cardSlide { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body>
+
+<div class="dashboard">
+    <!-- الهيدر -->
+    <div class="dash-header">
+        <button class="theme-btn" onclick="toggleTheme()" id="themeBtn">🌙 المظهر الليلي</button>
+        <h1>📊 لوحة النواقص والأوامر الذكية</h1>
+        <p>نظّمي وأديري طلبيات بضاعتكِ ونواقصكِ بضغطة زر واحدة</p>
+    </div>
+
+    <!-- بار الإحصائيات الحي -->
+    <div class="stats-bar">
+        <div class="stat-card">
+            <span class="stat-label">📦 إجمالي الأصناف الناقصة</span>
+            <span class="stat-value" id="statTotalItems">0</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-label">🏬 عدد الموردين النشطين</span>
+            <span class="stat-value" id="statTotalSuppliers">0</span>
+        </div>
+    </div>
+
+    <!-- نافيجشن التبويبات -->
+    <div class="tabs">
+        <button class="tab-link active" onclick="openPanel('panel-nawaqis')">📋 إدارة الطلبيات والنواقص</button>
+        <button class="tab-link" onclick="openPanel('panel-suppliers')">🏬 الدليل السريع للموردين</button>
+    </div>
+
+    <!-- لوحة النواقص -->
+    <div id="panel-nawaqis" class="panel active">
+        <!-- فورم الإضافة السريع -->
+        <div class="form-container">
+            <div class="grid-inputs">
+                <div class="field">
+                    <label>المورد المسؤول</label>
+                    <select id="itemSupplier"></select>
+                </div>
+                <div class="field">
+                    <label>اسم البضاعة / الصنف</label>
+                    <input type="text" id="itemName" placeholder="مثال: علب تونة قطع">
+                </div>
+                <div class="field">
+                    <label>الكمية</label>
+                    <input type="number" id="itemQty" value="1" min="1">
+                </div>
+                <button class="btn btn-main" onclick="addNewItem()">إضافة للبيانات</button>
+            </div>
+        </div>
+
+        <!-- خانة البحث التفاعلي -->
+        <div class="search-wrapper">
+            <input type="text" id="searchInput" oninput="renderApp()" placeholder="🔍 ابحثي فوراً عن أي صنف أو بضاعة متسجلة هنا...">
+        </div>
+
+        <!-- مكان عرض الكروت الذكية -->
+        <div id="blocksContainer"></div>
+    </div>
+
+    <!-- لوحة الموردين -->
+    <div id="panel-suppliers" class="panel">
+        <div class="form-container" style="max-width: 550px;">
+            <div class="grid-inputs" style="grid-template-columns: 3fr auto;">
+                <div class="field">
+                    <label>اسم المورد الجديد</label>
+                    <input type="text" id="newSupplierName" placeholder="مثال: شركة النيل للتجارة">
+                </div>
+                <button class="btn btn-main" onclick="addNewSupplier()">إضافة مورد</button>
+            </div>
+        </div>
+
+        <h3 style="margin-bottom: 15px; font-size: 15px; font-weight: 700;">قائمة الموردين المسجلين (اضغطي على أي اسم للتعديل الفوري):</h3>
+        <div id="suppliersList"></div>
+    </div>
+</div>
+
+<script>
+    // الحفظ والاسترجاع التلقائي للبيانات
+    let defaultSups = [{ id: "s-1", name: "مورد عام / غير محدد" }, { id: "s-2", name: "مورد الألبان والمجمدات" }];
+    let suppliers = JSON.parse(localStorage.getItem('ultra_sups')) || defaultSups;
+    let items = JSON.parse(localStorage.getItem('ultra_items')) || [];
+    let theme = localStorage.getItem('ultra_theme') || 'light';
+
+    document.documentElement.setAttribute('data-theme', theme);
+    document.getElementById('themeBtn').innerHTML = theme === 'dark' ? '☀️ المظهر النهاري' : '🌙 المظهر الليلي';
+
+    function toggleTheme() {
+        theme = theme === 'light' ? 'dark' : 'light';
+        document.documentElement.setAttribute('data-theme', theme);
+        localStorage.setItem('ultra_theme', theme);
+        document.getElementById('themeBtn').innerHTML = theme === 'dark' ? '☀️ المظهر النهاري' : '🌙 المظهر الليلي';
+    }
+
+    function openPanel(id) {
+        document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+        document.querySelectorAll('.tab-link').forEach(t => t.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+        event.currentTarget.classList.add('active');
+        renderApp();
+    }
+
+    function save() {
+        localStorage.setItem('ultra_sups', JSON.stringify(suppliers));
+        localStorage.setItem('ultra_items', JSON.stringify(items));
+    }
+
+    function addNewSupplier() {
+        const input = document.getElementById('newSupplierName');
+        if(!input.value.trim()) return;
+        suppliers.push({ id: 's-' + Date.now(), name: input.value.trim() });
+        input.value = '';
+        save();
+        renderApp();
+    }
+
+    function updateSupplier(id, val) {
+        let s = suppliers.find(x => x.id === id);
+        if(s && val.trim()) { s.name = val.trim(); save(); }
+    }
+
+    function deleteSupplier(id) {
+        if(items.some(i => i.supId === id)) {
+            alert('عفواً، لا يمكن مسح هذا المورد بسبب وجود نواقص مسجلة تحت اسمه!');
+            return;
+        }
+        if(confirm('مسح المورد؟')) {
+            suppliers = suppliers.filter(x => x.id !== id);
+            save();
+            renderApp();
+        }
+    }
+
+    function addNewItem() {
+        const supSelect = document.getElementById('itemSupplier');
+        const nameInput = document.getElementById('itemName');
+        const qtyInput = document.getElementById('itemQty');
+
+        if(!nameInput.value.trim()) { alert('اكتبي اسم الصنف أولاً 📝'); return; }
+
+        items.push({
+            id: 'i-' + Date.now(),
+            supId: supSelect.value,
+            name: nameInput.value.trim(),
+            qty: qtyInput.value
+        });
+
+        nameInput.value = '';
+        qtyInput.value = '1';
+        nameInput.focus();
+        save();
+        renderApp();
+    }
+
+    function deleteItem(id) {
+        items = items.filter(x => x.id !== id);
+        save();
+        renderApp();
+    }
+
+    // ميزة نسخ لستة الأصناف وإعدادها للواتساب بضغطة زر
+    function shareSupplierOrder(supName, supId) {
+        const supItems = items.filter(i => i.supId === supId);
+        let text = `📦 *قائمة النواقص والطلبات المطلوبة من: (${supName})*\n`;
+        text += `-----------------------------------------\n`;
+        supItems.forEach((item, index) => {
+            text += `${index + 1}) *${item.name}* -> الكمية: (${item.qty})\n`;
+        });
+        text += `-----------------------------------------\n⏳ تم التجهيز بواسطة نظام النواقص الذكي.`;
+
+        navigator.clipboard.writeText(text).then(() => {
+            alert('✅ تم نسخ نص الطلبية بنجاح! تقدري تفتحي الواتساب وتعملي "لصق / Paste" وتبعتيها للمورد فوراً.');
+        });
+    }
+
+    function renderApp() {
+        // تحديث الإحصائيات
+        document.getElementById('statTotalItems').innerText = items.length;
+        document.getElementById('statTotalSuppliers').innerText = suppliers.length;
+
+        // تحديث دروب داون الموردين
+        document.getElementById('itemSupplier').innerHTML = suppliers.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+
+        // لستة الموردين
+        document.getElementById('suppliersList').innerHTML = suppliers.map(s => `
+            <div class="sup-manage-item">
+                <input type="text" value="${s.name}" onchange="updateSupplier('${s.id}', this.value)">
+                <button class="btn btn-action-del" onclick="deleteSupplier('${s.id}')">حذف</button>
+            </div>
+        `).join('');
+
+        // فلترة وعرض الكروت والنواقص مع تفعيل البحث السريع
+        const searchVal = document.getElementById('searchInput').value.toLowerCase();
+        const container = document.getElementById('blocksContainer');
+        container.innerHTML = '';
+
+        let hasResults = false;
+
+        suppliers.forEach(sup => {
+            // تصفية العناصر بناء على المورد وبناء على كلمة البحث
+            const supItems = items.filter(i => i.supId === sup.id && i.name.toLowerCase().includes(searchVal));
+            
+            if(supItems.length > 0) {
+                hasResults = true;
+                let blockHtml = `
+                    <div class="supplier-block">
+                        <div class="block-header">
+                            <span class="block-title">🏬 ${sup.name}</span>
+                            <div class="header-actions">
+                                <button class="btn btn-share" onclick="shareSupplierOrder('${sup.name}', '${sup.id}')">📋 نسخ للواتساب</button>
+                            </div>
+                        </div>
+                        <table class="items-list-table">
+                            <thead>
+                                <tr>
+                                    <th>الصنف المتوفر نقصه</th>
+                                    <th style="width:100px; text-align:center;">الكمية</th>
+                                    <th style="width:100px; text-align:center;">إجراء</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                `;
+
+                supItems.forEach(item => {
+                    blockHtml += `
+                        <tr>
+                            <td><strong>${item.name}</strong></td>
+                            <td style="text-align:center; color:var(--primary); font-weight:800;">${item.qty}</td>
+                            <td style="text-align:center;">
+                                <button class="btn btn-action-del" onclick="deleteItem('${item.id}')">حذف</button>
+                            </td>
+                        </tr>
+                    `;
+                });
+
+                blockHtml += `</tbody></table></div>`;
+                container.innerHTML += blockHtml;
+            }
+        });
+
+        if(!hasResults) {
+            container.innerHTML = `<div class="empty-view">✨ لا توجد أي نواقص مطابقة للبحث أو مسجلة حالياً.</div>`;
+        }
+    }
+
+    renderApp();
+</script>
+
+</body>
+</html>
